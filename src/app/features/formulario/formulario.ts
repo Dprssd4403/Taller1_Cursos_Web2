@@ -16,6 +16,8 @@ export class Formulario {
 
   listaUsuarios = signal<Usuario[]>([]);
 
+  editando = false;
+
   nuevoUsuario: Usuario = {
     name: '',
     email: '',
@@ -24,35 +26,50 @@ export class Formulario {
     fecha: ''
   };
 
-  ngOnInit() {
+  ngOnInit(): void {
     this.obtenerUsuarios();
   }
 
+  //Metodo obtenerUsuarios
   obtenerUsuarios() {
-
-    this.servicioUsuario.getUsuarios().subscribe({
-      next: (usuarios) => {
-        this.listaUsuarios.set(usuarios);
-      },
-      error: (err) => console.error('Error al cargar alumnos:', err)
+    this.servicioUsuario.getUsuarios().subscribe(usuarios => {
+      this.listaUsuarios.set(usuarios);
     });
   }
 
-
+  //MetodoGuardar
   guardarUsuario() {
-    const registroParaEnviar = {
-      ...this.nuevoUsuario,
-      fecha: new Date().toLocaleDateString()
-    };
+    if (this.editando && this.nuevoUsuario.id) {
+      this.servicioUsuario.putUsuario(this.nuevoUsuario.id, this.nuevoUsuario).subscribe(() => {
+        this.obtenerUsuarios();
+        this.resetear();
+      });
+    }
+    else {
+      this.servicioUsuario.postUsuario(this.nuevoUsuario).subscribe(() => {
+        this.obtenerUsuarios();
+        this.resetear();
+      })
+    }
+  }
 
-    this.servicioUsuario.postUsuario(registroParaEnviar).subscribe({
-      next: (respuesta) => {
+  //Metodo Eliminar
+  eliminarUsuario(id: number) {
+    if (confirm('¿Desea eliminar el registro?')) {
+      this.servicioUsuario.deleteUsuario(id).subscribe(() => {
+        this.listaUsuarios.set(this.listaUsuarios().filter(u => u.id !== id));
+      })
+    }
+  }
 
-        this.listaUsuarios.set([{ ...respuesta, fecha: registroParaEnviar.fecha }, ...this.listaUsuarios()]);
+  //Metodo para poner los datos seleccionados en el formulario
+  seleccionarParaEditar(user: Usuario) {
+    this.editando = true;
+    this.nuevoUsuario = { ...user };
+  }
 
-        this.nuevoUsuario = { name: '', email: '', phone: '', curso: '', fecha: '' };
-      },
-      error: (err) => console.error("Error al registrar:", err)
-    });
+  resetear() {
+    this.editando = false;
+    this.nuevoUsuario = { name: '', email: '', phone: '' }
   }
 }
